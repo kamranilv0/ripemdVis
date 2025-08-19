@@ -156,6 +156,7 @@ button:disabled {
     text-align: center;
 }
 
+/* Enhanced controls for gate-level visualization */
 .compression-controls {
     display: flex;
     gap: 15px;
@@ -164,6 +165,51 @@ button:disabled {
     padding: 15px;
     background: #f7fafc;
     border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.visualization-controls {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: #edf2f7;
+    border-radius: 8px;
+    flex-wrap: wrap;
+}
+
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.speed-control label {
+    font-weight: bold;
+    color: #4a5568;
+}
+
+.speed-control input[type="range"] {
+    width: 120px;
+}
+
+.granularity-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.granularity-control label {
+    font-weight: bold;
+    color: #4a5568;
+}
+
+.granularity-control select {
+    padding: 5px 10px;
+    border: 1px solid #d2d6dc;
+    border-radius: 4px;
+    background: white;
 }
 
 .dual-lanes {
@@ -206,9 +252,19 @@ button:disabled {
     border-bottom: 1px solid #e2e8f0;
 }
 
+.register-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex: 1;
+    margin-left: 10px;
+}
+
 .register-label {
     font-weight: bold;
     color: #4a5568;
+    min-width: 20px;
 }
 
 .register-value {
@@ -218,6 +274,51 @@ button:disabled {
     border-radius: 4px;
     border: 1px solid #d2d6dc;
     transition: all 0.3s;
+    font-size: 14px;
+}
+
+.register-binary {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    background: #f7fafc;
+    padding: 2px 5px;
+    border-radius: 3px;
+    border: 1px solid #e2e8f0;
+    color: #4a5568;
+    letter-spacing: 1px;
+    word-break: break-all;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.register-binary:hover {
+    background: #e2e8f0;
+    color: #2d3748;
+}
+
+.register-binary .bit {
+    display: inline-block;
+    padding: 1px;
+    margin: 0 1px;
+    border-radius: 2px;
+    transition: all 0.2s;
+}
+
+.register-binary .bit:hover {
+    background: #667eea;
+    color: white;
+}
+
+.register-binary .bit.changed {
+    background: #fc8181;
+    color: white;
+    animation: bit-flash 0.5s;
+}
+
+@keyframes bit-flash {
+    0% { background: #fc8181; }
+    50% { background: #feb2b2; }
+    100% { background: #fc8181; }
 }
 
 .register-value.changed {
@@ -350,15 +451,192 @@ footer a:hover {
         flex-direction: column;
         gap: 10px;
     }
+    
+    .compression-controls,
+    .visualization-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .compression-controls > *,
+    .visualization-controls > * {
+        margin-bottom: 5px;
+    }
+    
+    .register-binary {
+        font-size: 8px;
+        letter-spacing: 0;
+    }
+    
+    .gate-visualization {
+        padding: 10px;
+    }
+    
+    #gate-canvas {
+        height: 250px;
+    }
+    
+    .gate-controls {
+        justify-content: center;
+    }
 }
 
-/* Animation for active elements */
-.active-step {
-    animation: pulse 1s infinite;
+/* Gate visualization styles */
+.gate-visualization {
+    background: white;
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
 }
 
-@keyframes pulse {
+.gate-visualization h3 {
+    margin-bottom: 15px;
+    color: #4a5568;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 10px;
+}
+
+.gate-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.gate-controls button {
+    padding: 8px 15px;
+    font-size: 12px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.gate-controls button:hover {
+    background: #5a67d8;
+}
+
+.gate-canvas-container {
+    border: 1px solid #d2d6dc;
+    border-radius: 6px;
+    background: #fafafa;
+    overflow: auto;
+    margin-bottom: 15px;
+}
+
+#gate-canvas {
+    width: 100%;
+    height: 400px;
+    background: white;
+}
+
+.bit-inspector {
+    background: #f7fafc;
+    border: 1px solid #d2d6dc;
+    border-radius: 6px;
+    padding: 15px;
+}
+
+.bit-inspector h4 {
+    margin-bottom: 10px;
+    color: #4a5568;
+}
+
+.bit-details {
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    min-height: 60px;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #e2e8f0;
+}
+
+/* SVG Gate styles */
+.gate {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.gate:hover {
+    filter: brightness(1.1);
+}
+
+.gate.highlighted {
+    stroke: #ff6b6b;
+    stroke-width: 3;
+}
+
+.wire {
+    stroke: #4a5568;
+    stroke-width: 2;
+    fill: none;
+    transition: all 0.2s;
+}
+
+.wire.active {
+    stroke: #48bb78;
+    stroke-width: 3;
+}
+
+.wire.highlight-path {
+    stroke: #ff6b6b;
+    stroke-width: 4;
+    animation: wire-pulse 1s infinite;
+}
+
+@keyframes wire-pulse {
     0% { opacity: 1; }
-    50% { opacity: 0.7; }
+    50% { opacity: 0.6; }
     100% { opacity: 1; }
+}
+
+.bit-value {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    cursor: pointer;
+}
+
+.bit-value.zero {
+    fill: #718096;
+}
+
+.bit-value.one {
+    fill: #2d3748;
+}
+
+.gate-label {
+    font-family: 'Arial', sans-serif;
+    font-size: 11px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    fill: white;
+}
+
+/* Gate shapes */
+.gate-and {
+    fill: #4299e1;
+}
+
+.gate-or {
+    fill: #48bb78;
+}
+
+.gate-xor {
+    fill: #ed8936;
+}
+
+.gate-not {
+    fill: #e53e3e;
+}
+
+.gate-adder {
+    fill: #805ad5;
 }

@@ -52,7 +52,27 @@
             <div class="compression-controls">
                 <button id="play-pause-button" disabled>▶ Play</button>
                 <button id="next-step-button" disabled>Next Step</button>
+                <button id="prev-step-button" disabled>◀ Prev Step</button>
                 <span id="current-step">Step: 0/160</span>
+                <div class="speed-control">
+                    <label for="speed-slider">Speed:</label>
+                    <input type="range" id="speed-slider" min="0.1" max="16" step="0.1" value="1.0">
+                    <span id="speed-display">1.0×</span>
+                </div>
+            </div>
+            
+            <div class="visualization-controls">
+                <button id="toggle-view-button">📊 Toggle Gate View</button>
+                <button id="toggle-endian-button">🔄 Toggle Endianness</button>
+                <button id="export-button">💾 Export Frame</button>
+                <div class="granularity-control">
+                    <label for="step-granularity">Step Granularity:</label>
+                    <select id="step-granularity">
+                        <option value="gate">Gate Level</option>
+                        <option value="operation" selected>Operation Level</option>
+                        <option value="round">Round Level</option>
+                    </select>
+                </div>
             </div>
             
             <div class="dual-lanes">
@@ -61,23 +81,38 @@
                     <div class="registers">
                         <div class="register-row">
                             <span class="register-label">A:</span>
-                            <span id="left-a" class="register-value">0x67452301</span>
+                            <div class="register-display">
+                                <span id="left-a" class="register-value">0x67452301</span>
+                                <div id="left-a-binary" class="register-binary" title="Binary representation">01100111010001010010001100000001</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">B:</span>
-                            <span id="left-b" class="register-value">0xefcdab89</span>
+                            <div class="register-display">
+                                <span id="left-b" class="register-value">0xefcdab89</span>
+                                <div id="left-b-binary" class="register-binary" title="Binary representation">11101111110011011010101110001001</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">C:</span>
-                            <span id="left-c" class="register-value">0x98badcfe</span>
+                            <div class="register-display">
+                                <span id="left-c" class="register-value">0x98badcfe</span>
+                                <div id="left-c-binary" class="register-binary" title="Binary representation">10011000101110101101110011111110</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">D:</span>
-                            <span id="left-d" class="register-value">0x10325476</span>
+                            <div class="register-display">
+                                <span id="left-d" class="register-value">0x10325476</span>
+                                <div id="left-d-binary" class="register-binary" title="Binary representation">00010000001100100101010001110110</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">E:</span>
-                            <span id="left-e" class="register-value">0xc3d2e1f0</span>
+                            <div class="register-display">
+                                <span id="left-e" class="register-value">0xc3d2e1f0</span>
+                                <div id="left-e-binary" class="register-binary" title="Binary representation">11000011110100101110000111110000</div>
+                            </div>
                         </div>
                     </div>
                     <div class="current-operation">
@@ -91,23 +126,38 @@
                     <div class="registers">
                         <div class="register-row">
                             <span class="register-label">A:</span>
-                            <span id="right-a" class="register-value">0x67452301</span>
+                            <div class="register-display">
+                                <span id="right-a" class="register-value">0x67452301</span>
+                                <div id="right-a-binary" class="register-binary" title="Binary representation">01100111010001010010001100000001</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">B:</span>
-                            <span id="right-b" class="register-value">0xefcdab89</span>
+                            <div class="register-display">
+                                <span id="right-b" class="register-value">0xefcdab89</span>
+                                <div id="right-b-binary" class="register-binary" title="Binary representation">11101111110011011010101110001001</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">C:</span>
-                            <span id="right-c" class="register-value">0x98badcfe</span>
+                            <div class="register-display">
+                                <span id="right-c" class="register-value">0x98badcfe</span>
+                                <div id="right-c-binary" class="register-binary" title="Binary representation">10011000101110101101110011111110</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">D:</span>
-                            <span id="right-d" class="register-value">0x10325476</span>
+                            <div class="register-display">
+                                <span id="right-d" class="register-value">0x10325476</span>
+                                <div id="right-d-binary" class="register-binary" title="Binary representation">00010000001100100101010001110110</div>
+                            </div>
                         </div>
                         <div class="register-row">
                             <span class="register-label">E:</span>
-                            <span id="right-e" class="register-value">0xc3d2e1f0</span>
+                            <div class="register-display">
+                                <span id="right-e" class="register-value">0xc3d2e1f0</span>
+                                <div id="right-e-binary" class="register-binary" title="Binary representation">11000011110100101110000111110000</div>
+                            </div>
                         </div>
                     </div>
                     <div class="current-operation">
@@ -123,6 +173,26 @@
                     <span>Round: <span id="current-round">1</span>/5</span>
                     <span>Function: <span id="current-function">F</span></span>
                     <span>Constant: <span id="current-constant">0x00000000</span></span>
+                </div>
+            </div>
+
+            <div class="gate-visualization" id="gate-section" style="display: none;">
+                <h3>🔬 Gate-Level Operations</h3>
+                <div class="gate-controls">
+                    <button id="zoom-in-button">🔍 Zoom In</button>
+                    <button id="zoom-out-button">🔍 Zoom Out</button>
+                    <button id="highlight-path-button">💡 Highlight Path</button>
+                </div>
+                <div class="gate-canvas-container">
+                    <svg id="gate-canvas" width="800" height="400" viewBox="0 0 800 400">
+                        <!-- Gate visualization will be rendered here -->
+                    </svg>
+                </div>
+                <div class="bit-inspector">
+                    <h4>🔎 Bit Inspector</h4>
+                    <div id="bit-details" class="bit-details">
+                        Click on any bit to see its dependency path
+                    </div>
                 </div>
             </div>
         </section>

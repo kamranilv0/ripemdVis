@@ -11,6 +11,9 @@ class RIPEMD160Visualizer {
         this.steps = [];
         this.currentBlock = 0;
         this.animationSpeed = 1000; // milliseconds between steps
+        this.showGateView = false;
+        this.littleEndian = true;
+        this.zoomLevel = 1.0;
         
         this.initializeElements();
         this.setupEventListeners();
@@ -30,10 +33,27 @@ class RIPEMD160Visualizer {
         this.messageLength = document.getElementById('message-length');
         this.messageBlocks = document.getElementById('message-blocks');
         
-        // Control elements
+        // Enhanced control elements
         this.playPauseButton = document.getElementById('play-pause-button');
         this.nextStepButton = document.getElementById('next-step-button');
+        this.prevStepButton = document.getElementById('prev-step-button');
         this.currentStepDisplay = document.getElementById('current-step');
+        this.speedSlider = document.getElementById('speed-slider');
+        this.speedDisplay = document.getElementById('speed-display');
+        this.stepGranularity = document.getElementById('step-granularity');
+        
+        // Visualization controls
+        this.toggleViewButton = document.getElementById('toggle-view-button');
+        this.toggleEndianButton = document.getElementById('toggle-endian-button');
+        this.exportButton = document.getElementById('export-button');
+        
+        // Gate visualization elements
+        this.gateSection = document.getElementById('gate-section');
+        this.gateCanvas = document.getElementById('gate-canvas');
+        this.bitDetails = document.getElementById('bit-details');
+        this.zoomInButton = document.getElementById('zoom-in-button');
+        this.zoomOutButton = document.getElementById('zoom-out-button');
+        this.highlightPathButton = document.getElementById('highlight-path-button');
         
         // Register elements
         this.leftRegisters = {
@@ -44,12 +64,28 @@ class RIPEMD160Visualizer {
             e: document.getElementById('left-e')
         };
         
+        this.leftRegistersBinary = {
+            a: document.getElementById('left-a-binary'),
+            b: document.getElementById('left-b-binary'),
+            c: document.getElementById('left-c-binary'),
+            d: document.getElementById('left-d-binary'),
+            e: document.getElementById('left-e-binary')
+        };
+        
         this.rightRegisters = {
             a: document.getElementById('right-a'),
             b: document.getElementById('right-b'),
             c: document.getElementById('right-c'),
             d: document.getElementById('right-d'),
             e: document.getElementById('right-e')
+        };
+        
+        this.rightRegistersBinary = {
+            a: document.getElementById('right-a-binary'),
+            b: document.getElementById('right-b-binary'),
+            c: document.getElementById('right-c-binary'),
+            d: document.getElementById('right-d-binary'),
+            e: document.getElementById('right-e-binary')
         };
         
         // Operation displays
@@ -64,6 +100,11 @@ class RIPEMD160Visualizer {
         // Result elements
         this.finalHash = document.getElementById('final-hash');
         this.hashHex = document.getElementById('hash-hex');
+        
+        // State variables
+        this.showGateView = false;
+        this.littleEndian = true;
+        this.zoomLevel = 1.0;
     }
 
     setupEventListeners() {
@@ -72,11 +113,55 @@ class RIPEMD160Visualizer {
         this.resetButton.addEventListener('click', () => this.reset());
         this.playPauseButton.addEventListener('click', () => this.togglePlayPause());
         this.nextStepButton.addEventListener('click', () => this.nextStep());
+        this.prevStepButton.addEventListener('click', () => this.prevStep());
+        
+        // Enhanced controls
+        this.speedSlider.addEventListener('input', () => this.updateSpeed());
+        this.toggleViewButton.addEventListener('click', () => this.toggleGateView());
+        this.toggleEndianButton.addEventListener('click', () => this.toggleEndianness());
+        this.exportButton.addEventListener('click', () => this.exportCurrentFrame());
+        
+        // Gate visualization controls
+        this.zoomInButton.addEventListener('click', () => this.zoomIn());
+        this.zoomOutButton.addEventListener('click', () => this.zoomOut());
+        this.highlightPathButton.addEventListener('click', () => this.toggleHighlightPath());
         
         // Enter key on input
         this.messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.calculateHash();
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+            
+            switch(e.key) {
+                case ' ':
+                    e.preventDefault();
+                    this.togglePlayPause();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.nextStep();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.prevStep();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.increaseSpeed();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.decreaseSpeed();
+                    break;
+                case 'g':
+                    e.preventDefault();
+                    this.toggleGateView();
+                    break;
             }
         });
     }
@@ -92,6 +177,7 @@ class RIPEMD160Visualizer {
         this.playPauseButton.textContent = '▶ Play';
         this.playPauseButton.disabled = true;
         this.nextStepButton.disabled = true;
+        this.prevStepButton.disabled = true;
         this.stepButton.disabled = false;
         
         // Clear displays
@@ -111,11 +197,23 @@ class RIPEMD160Visualizer {
             e: '0xc3d2e1f0'
         };
         
+        const initialBinary = {
+            a: '01100111010001010010001100000001',
+            b: '11101111110011011010101110001001',
+            c: '10011000101110101101110011111110',
+            d: '00010000001100100101010001110110',
+            e: '11000011110100101110000111110000'
+        };
+        
         Object.keys(initialValues).forEach(reg => {
             this.leftRegisters[reg].textContent = initialValues[reg];
             this.rightRegisters[reg].textContent = initialValues[reg];
             this.leftRegisters[reg].classList.remove('changed');
             this.rightRegisters[reg].classList.remove('changed');
+            
+            // Update binary displays
+            this.updateBinaryDisplay(this.leftRegistersBinary[reg], initialBinary[reg]);
+            this.updateBinaryDisplay(this.rightRegistersBinary[reg], initialBinary[reg]);
         });
         
         // Clear operations
@@ -127,6 +225,16 @@ class RIPEMD160Visualizer {
         this.currentFunction.textContent = 'F';
         this.currentConstant.textContent = '0x00000000';
         this.currentStepDisplay.textContent = 'Step: 0/0';
+        
+        // Reset speed and controls
+        this.speedSlider.value = '1.0';
+        this.speedDisplay.textContent = '1.0×';
+        this.animationSpeed = 1000;
+        
+        // Hide gate view
+        this.gateSection.style.display = 'none';
+        this.toggleViewButton.textContent = '📊 Toggle Gate View';
+        this.showGateView = false;
     }
 
     calculateHash() {
@@ -472,6 +580,17 @@ class RIPEMD160Visualizer {
         this.currentFunction.textContent = step.function;
         this.currentConstant.textContent = step.leftLane.constant;
         
+        // Store previous values for change detection
+        const prevLeftValues = Object.keys(this.leftRegisters).reduce((acc, reg) => {
+            acc[reg] = parseInt(this.leftRegisters[reg].textContent, 16);
+            return acc;
+        }, {});
+        
+        const prevRightValues = Object.keys(this.rightRegisters).reduce((acc, reg) => {
+            acc[reg] = parseInt(this.rightRegisters[reg].textContent, 16);
+            return acc;
+        }, {});
+        
         // Update left lane registers
         this.updateRegister(this.leftRegisters.a, step.leftLane.a);
         this.updateRegister(this.leftRegisters.b, step.leftLane.b);
@@ -485,6 +604,21 @@ class RIPEMD160Visualizer {
         this.updateRegister(this.rightRegisters.c, step.rightLane.c);
         this.updateRegister(this.rightRegisters.d, step.rightLane.d);
         this.updateRegister(this.rightRegisters.e, step.rightLane.e);
+        
+        // Update binary displays with change detection
+        Object.keys(this.leftRegisters).forEach(reg => {
+            const newValue = step.leftLane[reg];
+            const changedBits = this.findChangedBits(prevLeftValues[reg], newValue);
+            const binary = this.toBinaryString(newValue);
+            this.updateBinaryDisplay(this.leftRegistersBinary[reg], binary, changedBits);
+        });
+        
+        Object.keys(this.rightRegisters).forEach(reg => {
+            const newValue = step.rightLane[reg];
+            const changedBits = this.findChangedBits(prevRightValues[reg], newValue);
+            const binary = this.toBinaryString(newValue);
+            this.updateBinaryDisplay(this.rightRegistersBinary[reg], binary, changedBits);
+        });
         
         // Update operations
         this.leftOperation.innerHTML = `
@@ -500,6 +634,11 @@ class RIPEMD160Visualizer {
             <strong>Constant:</strong> ${step.rightLane.constant}<br>
             <strong>Shift:</strong> ${step.rightLane.shift}
         `;
+        
+        // Update gate visualization if enabled
+        if (this.showGateView) {
+            this.renderGateVisualization();
+        }
     }
 
     updateRegister(element, value) {
@@ -509,6 +648,260 @@ class RIPEMD160Visualizer {
             element.classList.add('changed');
             setTimeout(() => element.classList.remove('changed'), 500);
         }
+    }
+
+    updateBinaryDisplay(element, binaryString, changedBits = []) {
+        // Clear existing content
+        element.innerHTML = '';
+        
+        // Create individual bit elements
+        for (let i = 0; i < binaryString.length; i++) {
+            const bitSpan = document.createElement('span');
+            bitSpan.className = 'bit';
+            bitSpan.textContent = binaryString[i];
+            bitSpan.dataset.bitIndex = i;
+            
+            // Add click handler for bit inspection
+            bitSpan.addEventListener('click', () => this.inspectBit(i, binaryString[i]));
+            
+            // Highlight changed bits
+            if (changedBits.includes(i)) {
+                bitSpan.classList.add('changed');
+            }
+            
+            element.appendChild(bitSpan);
+        }
+    }
+
+    // Convert 32-bit number to binary string
+    toBinaryString(value) {
+        return (value >>> 0).toString(2).padStart(32, '0');
+    }
+
+    // Find changed bits between two values
+    findChangedBits(oldValue, newValue) {
+        const oldBinary = this.toBinaryString(oldValue);
+        const newBinary = this.toBinaryString(newValue);
+        const changedBits = [];
+        
+        for (let i = 0; i < 32; i++) {
+            if (oldBinary[i] !== newBinary[i]) {
+                changedBits.push(i);
+            }
+        }
+        
+        return changedBits;
+    }
+
+    // Enhanced control methods
+    updateSpeed() {
+        const speed = parseFloat(this.speedSlider.value);
+        this.speedDisplay.textContent = speed.toFixed(1) + '×';
+        this.animationSpeed = 1000 / speed;
+    }
+
+    increaseSpeed() {
+        const currentSpeed = parseFloat(this.speedSlider.value);
+        if (currentSpeed < 16) {
+            this.speedSlider.value = Math.min(16, currentSpeed + 0.5);
+            this.updateSpeed();
+        }
+    }
+
+    decreaseSpeed() {
+        const currentSpeed = parseFloat(this.speedSlider.value);
+        if (currentSpeed > 0.1) {
+            this.speedSlider.value = Math.max(0.1, currentSpeed - 0.5);
+            this.updateSpeed();
+        }
+    }
+
+    toggleGateView() {
+        this.showGateView = !this.showGateView;
+        if (this.showGateView) {
+            this.gateSection.style.display = 'block';
+            this.toggleViewButton.textContent = '📋 Toggle Register View';
+            this.renderGateVisualization();
+        } else {
+            this.gateSection.style.display = 'none';
+            this.toggleViewButton.textContent = '📊 Toggle Gate View';
+        }
+    }
+
+    toggleEndianness() {
+        this.littleEndian = !this.littleEndian;
+        this.toggleEndianButton.textContent = this.littleEndian ? '🔄 Big Endian' : '🔄 Little Endian';
+        // Refresh binary displays with new endianness
+        this.refreshBinaryDisplays();
+    }
+
+    refreshBinaryDisplays() {
+        // Re-render all binary displays with current endianness
+        Object.keys(this.leftRegisters).forEach(reg => {
+            const value = parseInt(this.leftRegisters[reg].textContent, 16);
+            const binary = this.toBinaryString(value);
+            this.updateBinaryDisplay(this.leftRegistersBinary[reg], binary);
+            
+            const rightValue = parseInt(this.rightRegisters[reg].textContent, 16);
+            const rightBinary = this.toBinaryString(rightValue);
+            this.updateBinaryDisplay(this.rightRegistersBinary[reg], rightBinary);
+        });
+    }
+
+    prevStep() {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            this.displayStep(this.steps[this.currentStep]);
+            this.updateStepDisplay();
+            
+            if (this.showGateView) {
+                this.renderGateVisualization();
+            }
+        }
+    }
+
+    inspectBit(bitIndex, bitValue) {
+        this.bitDetails.innerHTML = `
+            <strong>Bit ${bitIndex}:</strong> ${bitValue}<br>
+            <strong>Position:</strong> ${this.littleEndian ? bitIndex : 31 - bitIndex} (${this.littleEndian ? 'LE' : 'BE'})<br>
+            <strong>Weight:</strong> 2^${bitIndex}<br>
+            <strong>Dependency:</strong> Analyzing...
+        `;
+        
+        // TODO: Add dependency analysis
+        this.analyzeBitDependency(bitIndex);
+    }
+
+    analyzeBitDependency(bitIndex) {
+        // Placeholder for dependency analysis
+        setTimeout(() => {
+            this.bitDetails.innerHTML += `<br><strong>Source:</strong> Input bit transformed through ${this.currentStep} operations`;
+        }, 500);
+    }
+
+    zoomIn() {
+        this.zoomLevel = Math.min(3.0, this.zoomLevel * 1.2);
+        this.applyZoom();
+    }
+
+    zoomOut() {
+        this.zoomLevel = Math.max(0.5, this.zoomLevel / 1.2);
+        this.applyZoom();
+    }
+
+    applyZoom() {
+        const canvas = this.gateCanvas;
+        canvas.style.transform = `scale(${this.zoomLevel})`;
+        canvas.style.transformOrigin = 'top left';
+    }
+
+    toggleHighlightPath() {
+        // TODO: Implement path highlighting
+        console.log('Highlighting critical path...');
+    }
+
+    exportCurrentFrame() {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        
+        // Create export data
+        const exportData = {
+            timestamp: timestamp,
+            step: this.currentStep,
+            totalSteps: this.totalSteps,
+            currentState: this.steps[this.currentStep] || null,
+            registers: {
+                left: Object.keys(this.leftRegisters).reduce((acc, reg) => {
+                    acc[reg] = {
+                        hex: this.leftRegisters[reg].textContent,
+                        binary: this.toBinaryString(parseInt(this.leftRegisters[reg].textContent, 16))
+                    };
+                    return acc;
+                }, {}),
+                right: Object.keys(this.rightRegisters).reduce((acc, reg) => {
+                    acc[reg] = {
+                        hex: this.rightRegisters[reg].textContent,
+                        binary: this.toBinaryString(parseInt(this.rightRegisters[reg].textContent, 16))
+                    };
+                    return acc;
+                }, {})
+            }
+        };
+        
+        // Download as JSON
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ripemd160-step-${this.currentStep}-${timestamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    renderGateVisualization() {
+        if (!this.showGateView || !this.steps[this.currentStep]) return;
+        
+        const canvas = this.gateCanvas;
+        const step = this.steps[this.currentStep];
+        
+        // Clear canvas
+        canvas.innerHTML = '';
+        
+        // Create SVG elements for current step visualization
+        this.renderCurrentOperation(canvas, step);
+    }
+
+    renderCurrentOperation(canvas, step) {
+        // Simple gate visualization for current operation
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('transform', 'translate(50, 50)');
+        
+        // Draw function gate (simplified)
+        const functionRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        functionRect.setAttribute('x', '0');
+        functionRect.setAttribute('y', '0');
+        functionRect.setAttribute('width', '100');
+        functionRect.setAttribute('height', '60');
+        functionRect.setAttribute('rx', '10');
+        functionRect.setAttribute('class', 'gate gate-xor');
+        
+        const functionLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        functionLabel.setAttribute('x', '50');
+        functionLabel.setAttribute('y', '35');
+        functionLabel.setAttribute('class', 'gate-label');
+        functionLabel.textContent = step.function;
+        
+        g.appendChild(functionRect);
+        g.appendChild(functionLabel);
+        
+        // Add some input/output wires
+        const inputWire1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        inputWire1.setAttribute('x1', '-30');
+        inputWire1.setAttribute('y1', '20');
+        inputWire1.setAttribute('x2', '0');
+        inputWire1.setAttribute('y2', '20');
+        inputWire1.setAttribute('class', 'wire active');
+        
+        const inputWire2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        inputWire2.setAttribute('x1', '-30');
+        inputWire2.setAttribute('y1', '40');
+        inputWire2.setAttribute('x2', '0');
+        inputWire2.setAttribute('y2', '40');
+        inputWire2.setAttribute('class', 'wire active');
+        
+        const outputWire = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        outputWire.setAttribute('x1', '100');
+        outputWire.setAttribute('y1', '30');
+        outputWire.setAttribute('x2', '130');
+        outputWire.setAttribute('y2', '30');
+        outputWire.setAttribute('class', 'wire active');
+        
+        g.appendChild(inputWire1);
+        g.appendChild(inputWire2);
+        g.appendChild(outputWire);
+        
+        canvas.appendChild(g);
     }
 
     updateStepDisplay() {
