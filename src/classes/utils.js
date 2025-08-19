@@ -50,7 +50,11 @@ export function binaryToString(binary) {
 }
 
 export function decimalToBinary(decimal) {
-  return Number(decimal).toString(2)
+  const num = Number(decimal);
+  if (isNaN(num)) {
+    return "0";
+  }
+  return num.toString(2);
 }
 
 export function binaryToDecimal(binary) {

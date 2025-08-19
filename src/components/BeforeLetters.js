@@ -2,7 +2,7 @@ import { decimalToBinary } from '../classes/utils'
 import ReactTooltip from 'react-tooltip';
 
 function displayHex(value) {
-  return Number(value >>> 0).toString(16).padStart(8, '0').match(new RegExp('.{1,' + 2 + '}', 'g')).join(' ');
+  return Number(value || 0 >>> 0).toString(16).padStart(8, '0').match(new RegExp('.{1,' + 2 + '}', 'g')).join(' ');
 }
 
 function BeforeLetters({ letters, base, labels = [], clock, algorithm = 'sha256' }) {
@@ -56,7 +56,7 @@ function BeforeLetters({ letters, base, labels = [], clock, algorithm = 'sha256'
             <div className="flex" data-tip={ displayHex(word) } key={key}>
               <span className="mr-2 font-bold text-green-600">{labels && labels[key]}</span>
               <div className={'px-1 ' + focusClass(key, clock)}>
-                { decimalToBinary(word).padStart(32, '0').match(new RegExp('.{1,' + 32 + '}', 'g')).join(' ') }
+                { decimalToBinary(word || 0).padStart(32, '0').match(new RegExp('.{1,' + 32 + '}', 'g')).join(' ') }
               </div>
             </div>
           )}
