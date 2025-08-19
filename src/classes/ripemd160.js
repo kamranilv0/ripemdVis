@@ -287,11 +287,14 @@ export function ripemd160Stepped(message, firstLoop, secondLoop, chunksLoop, inp
   
   const hash = toHexLE(h0) + toHexLE(h1) + toHexLE(h2) + toHexLE(h3) + toHexLE(h4);
 
+  // Ensure we have proper final letters
+  const finalLetters = lettersBefore.length > 1 ? lettersBefore[lettersBefore.length - 1] : [h0, h1, h2, h3, h4, h0, h1, h2, h3, h4];
+  
   return {
     hash,
-    letters: lettersBefore[lettersBefore.length - 1] || [],
+    letters: finalLetters,
     lettersBefore,
-    hs: hsBefore[hsBefore.length - 1] || [],
+    hs: hsBefore[hsBefore.length - 1] || [h0, h1, h2, h3, h4],
     hsBefore,
     w: w.map(word => word.toString(2).padStart(32, '0'))
   };

@@ -318,7 +318,7 @@ function App() {
     if (algorithm === 'ripemd160') {
       return ripemd160Stepped(message, firstLoop, secondLoop, chunksLoop, inputBase);
     } else {
-      return algorithmStepped(message, firstLoop, secondLoop, chunksLoop);
+      return shaStepped(message, firstLoop, secondLoop, chunksLoop);
     }
   }
 
@@ -459,13 +459,13 @@ function App() {
                 algorithm={algorithm}
               />
               <Hs hs={hsBefore} base={base} clock={cycleClock()} />
-              <MessageScheduleCalculation letters={letters} clock={cycleClock()} wView={wView} base={base} k={k}/>
-              <CompressionCalculation letters={lettersBefore} clock={cycleClock()} wView={wView} base={base} k={k} flash={flash} lastClock={lastClock} hsBefore={hsBefore} hs={hs} masterClock={clock} result={result} />
+              {algorithm === 'sha256' && <MessageScheduleCalculation letters={letters} clock={cycleClock()} wView={wView} base={base} k={k}/>}
+              {algorithm === 'sha256' && <CompressionCalculation letters={lettersBefore} clock={cycleClock()} wView={wView} base={base} k={k} flash={flash} lastClock={lastClock} hsBefore={hsBefore} hs={hs} masterClock={clock} result={result} />}
             </div>
           </div>
         </div>
         <div className="col">
-          <Constants k={k} clock={cycleClock()}/>
+          {algorithm === 'sha256' && <Constants k={k} clock={cycleClock()}/>}
         </div>
       </div>
     </div>
