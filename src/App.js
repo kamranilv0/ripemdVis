@@ -14,6 +14,7 @@ import {
 import MessageBlock from './components/MessageBlock';
 import MessageSchedule from './components/MessageSchedule';
 import { sha256 } from './classes/sha'
+import { ripemd160, ripemd160Stepped } from './classes/ripemd160';
 import Hs from './components/Hs';
 import Constants from './components/Constants';
 
@@ -36,11 +37,14 @@ ReactGA.initialize(trackingId);
 ReactGA.send('pageview');
 
 function App() {
+  const [algorithm, setAlgorithm] = useState('sha256'); // 'sha256' or 'ripemd160'
   const [result, setResult] = useState('');
   const [base, setBase] = useState('bin');
   const [inputBase, setInputBase] = useState('text');
   const [paddedInput, setPaddedInput] = useState('0');
-  const [wView, setWView] = useState(new Array(64).fill('0'.padStart(32, '0')));
+  const [wView, setWView] = useState(() => {
+    return algorithm === 'ripemd160' ? new Array(16).fill('0'.padStart(32, '0')) : new Array(64).fill('0'.padStart(32, '0'));
+  });
   const [letters, setLetters] = useState([]);
   const [lettersBefore, setLettersBefore] = useState([]);
   const [hs, setHs] = useState([]);
@@ -81,6 +85,14 @@ function App() {
     setPaddedInput(padding('', inputBase))
   }, []);
 
+  useEffect(() => {
+    document.title = algorithm === 'sha256' ? 'SHA256 Algorithm Explained' : 'RIPEMD160 Algorithm Explained';
+    // Reset wView when algorithm changes
+    setWView(algorithm === 'ripemd160' ? new Array(16).fill('0'.padStart(32, '0')) : new Array(64).fill('0'.padStart(32, '0')));
+    // Reset clock when switching algorithms
+    setClock(0);
+  }, [algorithm]);
+
   function onAutoClock() {
     setAutoplay(!autoplay);
     onClock();
@@ -91,7 +103,7 @@ function App() {
   function onClock() {
     if(fakeStep === 0 || true) {
       if (clock < lastClock()) setClock(clock + 1);
-      let result = shaStepped(input, firstLoop(clock), secondLoop(clock), chunksLoop(clock));
+      let result = algorithmStepped(input, firstLoop(clock), secondLoop(clock), chunksLoop(clock));
 
       setWView(result.w);
       setResult(result.hash);
@@ -122,7 +134,7 @@ function App() {
     setPaddedInput(padding(value, inputBase));
 
     if(clock === 0) value = '';
-    let result = shaStepped(value, firstLoop(clock), secondLoop(clock), chunksLoop(clock));
+    let result = algorithmStepped(value, firstLoop(clock), secondLoop(clock), chunksLoop(clock));
 
     setWView(result.w);
     setResult(result.hash);
@@ -138,7 +150,7 @@ function App() {
     if(clock + 10 > lastClock()) return;
     setClock(clock + 10);
 
-    let result = shaStepped(input, firstLoop(clock + 9), secondLoop(clock + 9), chunksLoop(clock + 9));
+    let result = algorithmStepped(input, firstLoop(clock + 9), secondLoop(clock + 9), chunksLoop(clock + 9));
 
     setWView(result.w);
     setResult(result.hash);
@@ -154,7 +166,7 @@ function App() {
     if(clock < 10) return;
 
     if(clock < lastClock()) setClock(clock - 10);
-    let result = shaStepped(input, firstLoop(clock - 11), secondLoop(clock - 11), chunksLoop(clock - 11 ));
+    let result = algorithmStepped(input, firstLoop(clock - 11), secondLoop(clock - 11), chunksLoop(clock - 11 ));
 
     setWView(result.w);
     setResult(result.hash);
@@ -171,7 +183,7 @@ function App() {
     if(clock <= lastClock()) setClock(clock - 1);
     let value = input;
     if(clock === 1) value = '';
-    let result = shaStepped(value, firstLoop(clock - 2), secondLoop(clock - 2), chunksLoop(clock));
+    let result = algorithmStepped(value, firstLoop(clock - 2), secondLoop(clock - 2), chunksLoop(clock));
 
     setWView(result.w);
     setResult(result.hash);
@@ -184,6 +196,11 @@ function App() {
   }
 
   function firstLoop(clock) {
+    if (algorithm === 'ripemd160') {
+      // RIPEMD160 doesn't have extended message scheduling
+      return 15; // Always return 15 since we only have 16 words (0-15)
+    }
+    
     let step = clock%114; // 115
 
     if(step + 16 < 64) return 15 + step;
@@ -191,6 +208,12 @@ function App() {
   }
 
   function secondLoop(clock) {
+    if (algorithm === 'ripemd160') {
+      let step = clock % 81; // 81 steps per chunk (80 rounds + 1)
+      if (step < 80) return step;
+      return 79;
+    }
+    
     let step = clock%114; // 115
     if(step >= 49 && step < 113) return step - 49;
 
@@ -199,8 +222,12 @@ function App() {
   }
 
   function chunksLoop(clock) {
+    if (algorithm === 'ripemd160') {
+      if(clock < 80) return 1;
+      return Math.floor(clock/81) + 1;
+    }
+    
     if(clock < 114) return 1;
-
     return Math.floor(clock/114) + 1; // 115
   }
 
@@ -239,7 +266,9 @@ function App() {
 
     setClock(lastClockStateless(cyclesCount));
 
-    let result = shaStepped(input, 63, 63, cyclesCount);
+    let maxFirstLoop = algorithm === 'ripemd160' ? 15 : 63;
+    let maxSecondLoop = algorithm === 'ripemd160' ? 79 : 63;
+    let result = algorithmStepped(input, maxFirstLoop, maxSecondLoop, cyclesCount);
 
     setWView(result.w);
     setResult(result.hash);
@@ -253,7 +282,7 @@ function App() {
 
   function onClockInit() {
     setClock(0);
-    let result = shaStepped('s', firstLoop(0), secondLoop(0), chunksLoop(clock));
+    let result = algorithmStepped('s', firstLoop(0), secondLoop(0), chunksLoop(clock));
 
     setWView(result.w);
     setResult(result.hash);
@@ -266,15 +295,31 @@ function App() {
   }
 
   function lastClock() {
+    if (algorithm === 'ripemd160') {
+      if(chunksCount === 1) return 79; // 80 rounds (0-79)
+      return 79 + 81*(chunksCount - 1);
+    }
+    
     if(chunksCount === 1) return 113;
-
     return 113 + 114*(chunksCount - 1); // Don't touch this f*** thing.
   }
 
   function lastClockStateless(chunks) {
+    if (algorithm === 'ripemd160') {
+      if(chunks === 1) return 79;
+      return 79 + 81*(chunks - 1);
+    }
+    
     if(chunks === 1) return 113;
+    return 113 + 114*(chunks - 1);
+  }
 
-    return 113 + 114*(chunks - 1); // Don't touch this f*** thing.
+  function algorithmStepped(message, firstLoop, secondLoop, chunksLoop) {
+    if (algorithm === 'ripemd160') {
+      return ripemd160Stepped(message, firstLoop, secondLoop, chunksLoop, inputBase);
+    } else {
+      return algorithmStepped(message, firstLoop, secondLoop, chunksLoop);
+    }
   }
 
   function cycleClock() {
@@ -352,6 +397,10 @@ function App() {
       <div className="flex flex-col lg:flex-row w-full mb-2">
         <div className="w-full">
           <div className="flex">
+            <select value={algorithm} onChange={e => setAlgorithm(e.target.value)} className="bg-gray-700 mt-2 py-2 px-3 rounded mr-2 cursor-pointer hover:bg-gray-600 transition">
+              <option value="sha256">SHA256</option>
+              <option value="ripemd160">RIPEMD160</option>
+            </select>
             <select value={inputBase} onChange={e => onInputBaseChange(e.target.value)} className="bg-gray-700 mt-2 py-2 px-3 rounded mr-2 cursor-pointer hover:bg-gray-600 transition">
               <option value="text">Text</option>
               <option value="bin">Bin</option>
@@ -402,7 +451,13 @@ function App() {
         <div className="col pr-4">
           <div className="pr-4">
             <div>
-              <BeforeLetters letters={lettersBefore} base={base} clock={cycleClock()} labels={['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', ]} />
+              <BeforeLetters 
+                letters={lettersBefore} 
+                base={base} 
+                clock={cycleClock()} 
+                labels={algorithm === 'ripemd160' ? ['A', 'B', 'C', 'D', 'E', "A'", "B'", "C'", "D'", "E'"] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']} 
+                algorithm={algorithm}
+              />
               <Hs hs={hsBefore} base={base} clock={cycleClock()} />
               <MessageScheduleCalculation letters={letters} clock={cycleClock()} wView={wView} base={base} k={k}/>
               <CompressionCalculation letters={lettersBefore} clock={cycleClock()} wView={wView} base={base} k={k} flash={flash} lastClock={lastClock} hsBefore={hsBefore} hs={hs} masterClock={clock} result={result} />
