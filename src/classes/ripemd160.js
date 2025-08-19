@@ -1,7 +1,7 @@
 // RIPEMD160 Algorithm Implementation for Step-by-Step Visualization
 // Based on the official RIPEMD160 specification
 
-import { stringToBinary, hexToBinary, binaryToHex, chunkString, appendOneBit, isMultipleOf512, decimalToBinary } from './utils.js';
+import { stringToBinary, decimalToBinary } from './utils.js';
 
 // Left rotate function  
 export function rotateLeft(value, r) {

@@ -13,13 +13,13 @@ import {
 
 import MessageBlock from './components/MessageBlock';
 import MessageSchedule from './components/MessageSchedule';
-import { sha256 } from './classes/sha'
-import { ripemd160, ripemd160Stepped } from './classes/ripemd160';
+import { ripemd160Stepped } from './classes/ripemd160';
 import Hs from './components/Hs';
 import Constants from './components/Constants';
 
 import MessageScheduleCalculation from './components/MessageScheduleCalculation';
 import CompressionCalculation from './components/CompressionCalculation';
+import RipemdCompressionCalculation from './components/RipemdCompressionCalculation';
 import ButtonBack from './components/ButtonBack';
 import ButtonBackFast from './components/ButtonBackFast';
 import ButtonInit from './components/ButtonBackInit';
@@ -323,6 +323,10 @@ function App() {
   }
 
   function cycleClock() {
+    if (algorithm === 'ripemd160') {
+      if(chunksCount === 1) return clock%81;
+      return clock%81;
+    }
     if(chunksCount === 1) return clock%114;
     return clock%114; // 115
   }
@@ -359,7 +363,7 @@ function App() {
       let secondLoopForCurrentChunk = n < chunksLoop - 1 ? 63 : secondLoop;
       for(let i = 0; i <= secondLoopForCurrentChunk; i++) { // 63
         S1 = (rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25)) >>> 0;
-        ch = (e & f) ^ ((~e) & g) >>> 0;
+        ch = ((e & f) ^ ((~e) & g)) >>> 0;
         temp1 = (h + S1 + ch + k[i] + w[i])%(2**32) >>> 0;
         S0 = (rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22)) >>> 0;
         maj = ((a & b) ^ (a & c) ^ (b & c)) >>> 0;
@@ -423,8 +427,8 @@ function App() {
           <ButtonClockFinish onClockFinish={onClockFinish} clock={clock} lastClock={lastClock} />
           <div className="ml-2 hidden sm:block">
             <div className="flex items-center">
-              <div className="">Created by <a href="https://twitter.com/manceraio" target='_blank' className="text-indigo-200 hover:underline">@manceraio</a> /</div>
-              <a href="https://github.com/dmarman/sha256algorithm" target="_blank" className="ml-2">
+              <div className="">Created by <a href="https://twitter.com/manceraio" target='_blank' rel="noreferrer" className="text-indigo-200 hover:underline">@manceraio</a> /</div>
+              <a href="https://github.com/dmarman/sha256algorithm" target="_blank" rel="noreferrer" className="ml-2">
                 <svg xmlns="http://www.w3.org/2000/svg" className="icon icon-tabler icon-tabler-brand-github" width="16"
                      height="16" viewBox="0 0 24 24" strokeWidth="2" stroke="#ffffff" fill="none"
                      strokeLinecap="round" strokeLinejoin="round">
@@ -452,7 +456,7 @@ function App() {
           <div className="pr-4">
             <div>
               <BeforeLetters 
-                letters={lettersBefore} 
+                letters={algorithm === 'ripemd160' ? letters : lettersBefore} 
                 base={base} 
                 clock={cycleClock()} 
                 labels={algorithm === 'ripemd160' ? ['A', 'B', 'C', 'D', 'E', "A'", "B'", "C'", "D'", "E'"] : ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']} 
@@ -461,6 +465,7 @@ function App() {
               <Hs hs={hsBefore} base={base} clock={cycleClock()} />
               {algorithm === 'sha256' && <MessageScheduleCalculation letters={letters} clock={cycleClock()} wView={wView} base={base} k={k}/>}
               {algorithm === 'sha256' && <CompressionCalculation letters={lettersBefore} clock={cycleClock()} wView={wView} base={base} k={k} flash={flash} lastClock={lastClock} hsBefore={hsBefore} hs={hs} masterClock={clock} result={result} />}
+              {algorithm === 'ripemd160' && <RipemdCompressionCalculation letters={letters} clock={cycleClock()} wView={wView} base={base} lastClock={lastClock} hsBefore={hsBefore} hs={hs} masterClock={clock} result={result} />}
             </div>
           </div>
         </div>
